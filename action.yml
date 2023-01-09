@@ -1,0 +1,78 @@
+name: 'kAFL'
+description: 'Greet someone and record the time'
+inputs:
+  action:
+    description: kafl subcommand to execute
+    required: true
+    default: fuzz
+  workdir:
+    description: kafl workdir
+    required: false
+  input:
+    description: kafl coverage corpus input
+    required: false
+  timeout:
+    description: kafl execution timeout
+    required: false
+  bios:
+    description: QEMU BIOS
+    required: false
+  kernel:
+    description: QEMU kernel
+    required: false
+  initrd:
+    description: QEMU initrd
+    required: false
+  seed_dir:
+    description: seed_dir
+    required: false
+  config_file:
+    description: additional config file
+    required: false
+  extra_args:
+    description: additional arguments for kafl command line
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: Clone kAFL repo
+      uses: actions/checkout@v3
+      with:
+        repository: IntelLabs/kAFL
+        ref: docker.pyinstaller
+        path: _kafl
+
+    - name: Build image
+      uses: docker/build-push-action@v3
+      with:
+        context: _kafl/
+        push: false
+        tags: intellabs/kafl
+        load: true
+
+    # add action path to system path
+    # to execute run_docker.py script
+    - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
+      shell: bash
+
+    # if workdir is specified and doesn't exists
+    # the Docker daemon will create it itself as root:root
+    # and permission issues will follow
+    - name: Create workdir if required
+      run: mkdir -p ${{ inputs.workdir }}
+      shell: bash
+
+    - name: Display inputs
+      run: >
+        run_docker.py
+          --action '${{ inputs.action }}'
+          --timeout '${{ inputs.timeout }}'
+          --workdir '${{ inputs.workdir }}'
+          --input '${{ inputs.input }}'
+          --bios '${{ inputs.bios }}'
+          --kernel '${{ inputs.kernel }}'
+          --initrd '${{ inputs.initrd }}'
+          --seed_dir '${{ inputs.seed_dir }}'
+          --config_file '${{ inputs.config_file }}'
+          --extra_args '${{ inputs.extra_args }}'
+      shell: bash

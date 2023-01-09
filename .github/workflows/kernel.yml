@@ -1,0 +1,102 @@
+name: Fuzz Linux Kernel
+on: [push, pull_request]
+
+jobs:
+  fuzz:
+    runs-on: self-hosted
+    steps:
+      - name: Generate kAFL unique workdir
+        run: |
+          import os
+          from uuid import uuid4
+
+          uuid = uuid4()
+          kafl_workdir = f"/dev/shm/kafl_{str(uuid)}"
+          with open(os.environ['GITHUB_ENV'], 'a') as fh:
+            print(f'kafl_workdir={kafl_workdir}', file=fh)
+            print(f'kafl_workdir_uuid={uuid}', file=fh)
+        shell: python
+
+      - name: clone kafl.targets
+        uses: actions/checkout@v3
+        with:
+          repository: IntelLabs/kafl.targets
+          path: targets
+
+      - name: clone kafl.linux
+        uses: actions/checkout@v3
+        with:
+          repository: IntelLabs/kafl.linux
+          ref: kafl/fuzz-5.15-4
+          path: targets/linux-kernel/linux-guest
+
+      - name: Configure linux kernel
+        run: cp config.vanilla.virtio linux-guest/.config
+        working-directory: targets/linux-kernel
+
+      - name: Setup cache to speedup build
+        run: sudo apt-get install -y ccache
+
+      - name: Cache linux kernel build
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ccache
+          key: ${{ runner.os }}-${{ hashFiles('targets/linux-kernel/.config') }}
+
+      - name: Build kernel
+        run: |
+          sudo apt-get install -y gawk bison flex openssl libssl-dev libelf-dev lz4 dwarves
+          export PATH="/usr/lib/ccache:$PATH"
+          export CCACHE_DIR="$HOME/.cache/ccache"
+          make -C linux-guest -j$(nproc)
+        working-directory: targets/linux-kernel
+      
+      - name: Fuzz Linux kernel
+        uses: IntelLabs/kafl.actions@master
+        with:
+          action: fuzz
+          workdir: ${{ env.kafl_workdir }}
+          timeout: 60
+          kernel: targets/linux-kernel/linux-guest/arch/x86/boot/bzImage
+          config_file: targets/linux-kernel/kafl_config.yaml
+          extra_args: >-
+            --redqueen --grimoire --afl-dumb-mode --radamsa
+            --trace
+            -t 0.1 -ts 0.01
+            -m 512
+            --log
+            --log-hprintf
+            -p 2
+
+      - name: Get IP ranges from hprintf_00 log file
+        run: |
+          echo kafl_ip0=$(grep -oP 'Setting range 0:\s+\K.*-.*' ${{ env.kafl_workdir }}/hprintf_00.log) >> $GITHUB_ENV
+          echo kafl_ip1=$(grep -oP 'Setting range 1:\s+\K.*-.*' ${{ env.kafl_workdir }}/hprintf_00.log) >> $GITHUB_ENV
+
+      - name: Gather coverage info
+        uses: IntelLabs/kafl.actions@master
+        with:
+          action: cov
+          workdir: ${{ env.kafl_workdir }}
+          input: ${{ env.kafl_workdir }}
+          kernel: targets/linux-kernel/linux-guest/arch/x86/boot/bzImage
+          config_file: targets/linux-kernel/kafl_config.yaml
+          extra_args: >-
+            --resume
+            -ip0 ${{ env.kafl_ip0 }}
+            -ip1 ${{ env.kafl_ip1 }}
+            -m 512
+            -t 2
+            -p 12
+
+      # cleanup socket files, otherwise upload-artifact throws an error
+      # https://github.com/actions/upload-artifact/issues/139
+      - run: find ${{ env.kafl_workdir }} -type s -delete
+
+      - name: Upload workdir as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.kafl_workdir_uuid }}
+          path: ${{ env.kafl_workdir }}
+
+      - run: rm -r ${{ env.kafl_workdir }}
