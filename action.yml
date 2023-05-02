@@ -50,14 +50,14 @@ runs:
     - name: Display inputs
       run: >
         run_docker.py
-          --action '${{ inputs.action }}'
-          --timeout '${{ inputs.timeout }}'
-          --workdir '${{ inputs.workdir }}'
-          --input '${{ inputs.input }}'
-          --bios '${{ inputs.bios }}'
-          --kernel '${{ inputs.kernel }}'
-          --initrd '${{ inputs.initrd }}'
-          --seed_dir '${{ inputs.seed_dir }}'
-          --config_file '${{ inputs.config_file }}'
-          --extra_args '${{ inputs.extra_args }}'
+        --action '${{ inputs.action }}'
+        --timeout '${{ inputs.timeout }}'
+        --workdir '${{ inputs.workdir }}'
+        --input '${{ inputs.input }}'
+        --bios '${{ inputs.bios }}'
+        --kernel '${{ inputs.kernel }}'
+        --initrd '${{ inputs.initrd }}'
+        --seed_dir '${{ inputs.seed_dir }}'
+        --config_file '${{ inputs.config_file }}'
+        --extra_args '${{ inputs.extra_args }}'
       shell: bash
