@@ -76,6 +76,7 @@ cmdline = [
 ]
 cmdline.extend(docker_volumes)
 cmdline.extend(docker_envs)
+cmdline.extend(['--pull', 'always'])
 cmdline.append('intellabs/kafl')
 cmdline.append(namespace.action)
 cmdline.extend(kafl_args)
