@@ -12,6 +12,8 @@ jobs:
     timeout-minutes: 10080
     runs-on: self-hosted
     steps:
+      - run: echo "nproc=$(nproc)" >> $GITHUB_ENV
+
       - name: Generate kAFL unique workdir
         run: |
           import os
@@ -73,7 +75,7 @@ jobs:
             -m 512
             --log
             --log-hprintf
-            -p 48
+            -p ${{ env.nproc }}
 
       - name: Get IP ranges from hprintf_00 log file
         run: |
@@ -94,7 +96,7 @@ jobs:
             -ip1 ${{ env.kafl_ip1 }}
             -m 512
             -t 2
-            -p 12
+            -p ${{ env.nproc }}
 
       # cleanup socket files, otherwise upload-artifact throws an error
       # https://github.com/actions/upload-artifact/issues/139
