@@ -69,7 +69,7 @@ jobs:
             -m 512
             --log
             --log-hprintf
-            -p 2
+            -p 48
 
       - name: Get IP ranges from hprintf_00 log file
         run: |
