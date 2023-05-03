@@ -3,6 +3,9 @@ on: [push, pull_request]
 
 jobs:
   fuzz:
+    # try bypass 6h limitation
+    # 60 * 24 * 7 = 1 week
+    timeout-minutes: 10080
     runs-on: self-hosted
     steps:
       - name: Generate kAFL unique workdir
