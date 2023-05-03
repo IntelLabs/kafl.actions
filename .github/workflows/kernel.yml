@@ -8,11 +8,13 @@ on:
 jobs:
   fuzz:
     # try bypass 6h limitation
-    # 60 * 24 * 7 = 1 week
+    # 60 * 24 * 8 = 8 days
     timeout-minutes: 10080
     runs-on: self-hosted
     steps:
-      - run: echo "nproc=$(nproc)" >> $GITHUB_ENV
+      - run: |
+          echo "nproc=$(nproc)" >> $GITHUB_ENV
+          echo "campaign_timeout_seconds=$((60 * 60 * 24 * 7))" >> $GITHUB_ENV
 
       - name: Generate kAFL unique workdir
         run: |
@@ -65,7 +67,7 @@ jobs:
         with:
           action: fuzz
           workdir: ${{ env.kafl_workdir }}
-          timeout: 60
+          timeout: ${{ env.campaign_timeout_seconds }}
           kernel: targets/linux-kernel/linux-guest/arch/x86/boot/bzImage
           config_file: targets/linux-kernel/kafl_config.yaml
           extra_args: >-
