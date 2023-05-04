@@ -73,7 +73,6 @@ jobs:
           config_file: targets/linux-kernel/kafl_config.yaml
           extra_args: >-
             --redqueen --grimoire --afl-dumb-mode --radamsa
-            --trace
             -t 0.1 -ts 0.01
             -m 512
             --log
