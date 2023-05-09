@@ -4,6 +4,7 @@ import os
 import argparse
 import grp
 import subprocess
+from uuid import uuid4
 from pathlib import Path
 from pprint import pprint
 from contextlib import suppress
@@ -77,11 +78,17 @@ cmdline = [
 cmdline.extend(docker_volumes)
 cmdline.extend(docker_envs)
 cmdline.extend(['--pull', 'always'])
+# add name so we can identify the container and kill it after the timeout
+container_name = str(uuid4())
+cmdline.extend(['--name', container_name])
 cmdline.append('intellabs/kafl')
 cmdline.append(namespace.action)
 cmdline.extend(kafl_args)
 
 pprint(cmdline)
 
-with suppress(subprocess.TimeoutExpired):
+try:
     subprocess.check_call(cmdline, timeout=inputs['timeout'])
+except subprocess.TimeoutExpired:
+    cmdline = ['docker', 'kill', container_name]
+    subprocess.check_call(cmdline)
