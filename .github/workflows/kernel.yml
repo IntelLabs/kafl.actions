@@ -15,7 +15,8 @@ jobs:
       - run: |
           echo "nproc=$(nproc)" >> $GITHUB_ENV
           # timeout: 4 days
-          echo "campaign_timeout_seconds=$((60 * 60 * 24 * 4))" >> $GITHUB_ENV
+          # echo "campaign_timeout_seconds=$((60 * 60 * 24 * 4))" >> $GITHUB_ENV
+          echo "campaign_timeout_seconds=$((60 * 20))" >> $GITHUB_ENV
 
       - name: Generate kAFL unique workdir
         run: |
