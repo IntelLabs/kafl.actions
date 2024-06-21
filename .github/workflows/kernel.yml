@@ -1,10 +1,23 @@
 name: Fuzz Linux Kernel
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
 
 jobs:
   fuzz:
+    # try bypass 6h limitation
+    # 60 * 24 * 7 * 2 = 2 weeks
+    timeout-minutes: 20160
     runs-on: self-hosted
     steps:
+      - run: |
+          echo "nproc=$(nproc)" >> $GITHUB_ENV
+          # timeout: 4 days
+          # echo "campaign_timeout_seconds=$((60 * 60 * 24 * 4))" >> $GITHUB_ENV
+          echo "campaign_timeout_seconds=$((60 * 20))" >> $GITHUB_ENV
+
       - name: Generate kAFL unique workdir
         run: |
           import os
@@ -56,17 +69,16 @@ jobs:
         with:
           action: fuzz
           workdir: ${{ env.kafl_workdir }}
-          timeout: 60
+          timeout: ${{ env.campaign_timeout_seconds }}
           kernel: targets/linux-kernel/linux-guest/arch/x86/boot/bzImage
           config_file: targets/linux-kernel/kafl_config.yaml
           extra_args: >-
             --redqueen --grimoire --afl-dumb-mode --radamsa
-            --trace
             -t 0.1 -ts 0.01
             -m 512
             --log
             --log-hprintf
-            -p 2
+            -p ${{ env.nproc }}
 
       - name: Get IP ranges from hprintf_00 log file
         run: |
@@ -87,7 +99,7 @@ jobs:
             -ip1 ${{ env.kafl_ip1 }}
             -m 512
             -t 2
-            -p 12
+            -p ${{ env.nproc }}
 
       # cleanup socket files, otherwise upload-artifact throws an error
       # https://github.com/actions/upload-artifact/issues/139
